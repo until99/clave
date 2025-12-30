@@ -1,262 +1,201 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useToast } from 'primevue/usetoast'
+import { MusicBrainzApi, type IRecordingMatch } from 'musicbrainz-api'
+import { Form, type FormSubmitEvent } from '@primevue/forms'
+import InputText from 'primevue/inputtext'
+import InputNumber from 'primevue/inputnumber'
 
-import jsmediatags from 'jsmediatags/dist/jsmediatags.min.js'
+const mbApi = new MusicBrainzApi({
+  appName: 'clave-app',
+  appVersion: '0.1.0',
+  appContactInfo: 'gabriel.kasten@outlook.com',
+})
 
-import { PhPlayPause, PhTrash, PhUpload } from '@phosphor-icons/vue'
+const trackData = ref({
+  track_id: '',
+  track_title: '',
+  track_length: 0,
+  track_artist_id: '',
+  track_artist_name: '',
+  track_first_release_date: '',
+})
 
-// const STORAGE_KEY = 'music_player_metadata'
+const toast = useToast()
 
-// TODO: Implementar controle de som usando essa lib
-// https://github.com/kimlarocca/vue-sound
+const initialValues = ref({
+  title: 'luv',
+  artist: 'nujabes',
+})
 
-// TODO: Implementar componentes usando essa lib
-// https://primevue.org/
+const resolver = ({ values }: { values: { title?: string; artist?: string } }) => {
+  const errors: Record<string, { message: string }[]> = {}
 
-const size = ref<any>()
-const title = ref<any>()
-const album = ref<any>()
-const artist = ref<any>()
-const year = ref<any>()
-const track = ref<any>()
-const cover = ref<any>()
-const cover_description = ref<any>()
-
-const file = ref<File | null>(null)
-const audioInstance = ref<HTMLAudioElement | null>(null)
-// const isPlaying = ref(false)
-
-// function saveMetadata() {
-//   if (!file.value) return
-
-//   const reader = new FileReader()
-
-//   reader.onload = (e) => {
-//     const audioBase64 = e.target?.result
-
-//     const dataToSave = {
-//       audioData: audioBase64,
-//       size: size.value,
-//       title: title.value,
-//       album: album.value,
-//       artist: artist.value,
-//       year: year.value,
-//       track: track.value,
-//       cover: cover.value,
-//       cover_description: cover_description.value,
-//     }
-
-//     try {
-//       localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave))
-//     } catch (e) {
-//       console.warn('Não foi possível salvar os dados (QuotaExceeded).', e)
-//       alert('O arquivo é muito grande para salvar no LocalStorage.')
-//     }
-//   }
-
-//   reader.readAsDataURL(file.value)
-// }
-
-// function loadMetadata() {
-//   const saved = localStorage.getItem(STORAGE_KEY)
-//   if (saved) {
-//     try {
-//       const data = JSON.parse(saved)
-
-//       size.value = data.size
-//       title.value = data.title
-//       album.value = data.album
-//       artist.value = data.artist
-//       year.value = data.year
-//       track.value = data.track
-//       cover.value = data.cover
-//       cover_description.value = data.cover_description
-
-//       if (data.audioData) {
-//         if (audioInstance.value) {
-//           audioInstance.value.pause()
-//         }
-
-//         const audio = new Audio(data.audioData)
-//         audio.volume = 0.5
-//         audio.onended = () => {
-//           isPlaying.value = false
-//         }
-//         audioInstance.value = audio
-//       }
-//     } catch (e) {
-//       console.error('Erro ao ler dados salvos', e)
-//     }
-//   }
-// }
-
-// function clearMetadata() {
-//   localStorage.removeItem(STORAGE_KEY)
-
-//   size.value = null
-//   title.value = null
-//   album.value = null
-//   artist.value = null
-//   year.value = null
-//   track.value = null
-//   cover.value = null
-//   cover_description.value = null
-
-//   if (audioInstance.value) {
-//     audioInstance.value.pause()
-//     audioInstance.value = null
-//     isPlaying.value = false
-//   }
-//   file.value = null
-// }
-
-// onMounted(() => {
-//   loadMetadata()
-// })
-
-function appendFile() {
-  const inputElement = document.getElementById('audio-file-import') as HTMLInputElement
-
-  if (inputElement.files?.length === 0) {
-    alert('No file selected.')
-    return
+  if (!values.title) {
+    errors.title = [{ message: 'Title is required.' }]
   }
 
-  if (inputElement.files && inputElement.files.length > 0) {
-    file.value = inputElement.files[0]
+  if (!values.artist) {
+    errors.artist = [{ message: 'Artist is required.' }]
+  }
 
-    jsmediatags.read(file.value, {
-      onSuccess: (tag) => {
-        size.value = tag.size || 'N/A'
-        title.value = tag.tags.title || 'Desconhecido'
-        album.value = tag.tags.album || 'Desconhecido'
-        artist.value = tag.tags.artist || 'Desconhecido'
-        year.value = tag.tags.year || ''
-        track.value = tag.tags.track || ''
-
-        if (tag.tags.picture) {
-          const { data, format } = tag.tags.picture
-          let base64String = ''
-
-          for (let i = 0; i < data.length; i++) {
-            base64String += String.fromCharCode(data[i])
-          }
-
-          cover.value = `data:${format};base64,${window.btoa(base64String)}`
-          cover_description.value = tag.tags.picture.description
-        } else {
-          cover.value = null
-          cover_description.value = 'Sem capa'
-        }
-
-        // saveMetadata()
-      },
-      onError: (err) => {
-        console.error('Erro ao ler metadata:', err)
-      },
-    })
+  return {
+    errors,
   }
 }
 
-// watch(file, (populatedFile) => {
-//   if (populatedFile) {
-//     if (audioInstance.value) {
-//       audioInstance.value.pause()
-//       audioInstance.value = null
-//       isPlaying.value = false
-//     }
+const atachMetadata = async (result: IRecordingMatch | undefined) => {
+  if (result) {
+    trackData.value = {
+      track_id: result.id,
+      track_title: result.title,
+      track_length: result.length || 0,
+      track_first_release_date: result['first-release-date'] ?? 'Não Informado',
+      track_artist_id: result['artist-credit']?.[0]?.artist?.id ?? '',
+      track_artist_name: result['artist-credit']?.[0]?.artist?.name ?? 'Não Informado',
+    }
+  } else {
+    console.error('Não foi possível atribuir metadados')
+  }
+}
 
-//     const objectUrl = URL.createObjectURL(populatedFile)
-//     const audio = new Audio(objectUrl)
+const onSubmitRetrieveTrackMetadata = async (e: FormSubmitEvent) => {
+  if (e.valid) {
+    toast.add({ severity: 'success', summary: 'Metadata Retrieved.', life: 3000 })
 
-//     audio.volume = 0.5
-//     audio.onended = () => {
-//       isPlaying.value = false
-//     }
+    const artist = e.states.artist?.value
+    const title = e.states.title?.value
 
-//     audioInstance.value = audio
-//   }
-// })
+    const searchQuery = `query=artist:"${artist}" AND recording:"${title}"`
 
-// onUnmounted(() => {
-//   if (audioInstance.value) {
-//     audioInstance.value.pause()
-//     audioInstance.value = null
-//   }
-// })
+    await mbApi
+      .search('recording', {
+        query: searchQuery,
+      })
+      .then((r) => {
+        atachMetadata(r.recordings[0])
+      })
+      .catch((err) => {
+        alert(`Erro ao consultar metadados: ${err}`)
+      })
+  }
+}
 
-// function togglePlay() {
-//   if (audioInstance.value?.paused) {
-//     audioInstance.value
-//       ?.play()
-//       .then(() => {
-//         isPlaying.value = true
-//       })
-//       .catch((err) => {
-//         console.error('Erro no play:', err)
-//       })
-//   } else {
-//     audioInstance.value?.pause()
-//     isPlaying.value = false
-//   }
-// }
+const onSubmitInsertTrackIntoDatabase = async (e: FormSubmitEvent) => {
+  if (e.valid) {
+    toast.add({ severity: 'success', summary: 'Inserted into Database.', life: 3000 })
+
+    console.log(e.values)
+  }
+}
+
+const formattedTrackLength = computed(() => {
+  const ms = trackData.value.track_length || 0
+  const minutes = Math.floor(ms / 60000)
+  const seconds = Math.floor((ms % 60000) / 1000)
+  return `${minutes}:${String(seconds).padStart(2, '0')}`
+})
 </script>
 
 <template>
   <main class="p-4">
-    <div class="flex gap-2">
-      <input
-        type="file"
-        id="audio-file-import"
-        accept="audio/mp3"
-        class="border-2 border-blue-600 rounded bg-blue-200 px-2 py-1 cursor-pointer"
-        multiple="false"
-      />
-      <button
-        class="flex items-center gap-2 border-2 border-blue-600 rounded bg-blue-200 px-2 py-1 cursor-pointer font-semibold hover:bg-blue-600 hover:text-white"
-        @click="appendFile()"
-      >
-        <PhUpload :size="18" weight="duotone" />
-        Upload
-      </button>
-      <button
-        v-if="title"
-        @click="clearMetadata()"
-        class="flex items-center gap-2 border-2 border-red-600 rounded bg-red-200 px-2 py-1 cursor-pointer font-semibold hover:bg-red-600 hover:text-white"
-        title="Limpar dados salvos"
-      >
-        <PhTrash :size="18" />
-      </button>
-    </div>
-    <ul>
-      <li>{{ size }}</li>
-      <li>{{ title }}</li>
-      <li>{{ album }}</li>
-      <li>{{ artist }}</li>
-      <li>{{ year }}</li>
-      <li>{{ track }}</li>
-      <li>{{ cover_description }}</li>
-    </ul>
-    <div class="border p-2 rounded bg-gray-100 flex items-center justify-center min-h-50">
-      <img
-        v-if="cover"
-        :src="cover"
-        alt="Capa do Álbum"
-        class="max-w-75 h-auto rounded shadow-lg"
-      />
-      <span v-else class="text-gray-500">Nenhuma capa encontrada</span>
-    </div>
-  </main>
-  <footer class="flex justify-center">
-    <button
-      v-if="audioInstance"
-      @click="togglePlay()"
-      class="border-2 border-blue-600 rounded-full bg-blue-200 px-2 py-2 cursor-pointer"
+    <Form
+      v-slot="$form"
+      :initialValues
+      :resolver
+      :validateOnValueUpdate="false"
+      :validateOnBlur="true"
+      @submit="onSubmitRetrieveTrackMetadata"
+      class="flex flex-col gap-4 w-full sm:w-56"
     >
-      <PhPlayPause :size="18" />
-    </button>
-    <div v-else-if="title" class="text-sm text-gray-500 italic p-2">Carregando áudio...</div>
-  </footer>
-</template>
+      <div class="flex flex-col gap-1">
+        <InputText name="title" type="text" placeholder="Title" fluid />
+        <Message v-if="$form.title?.invalid" severity="error" size="small" variant="simple">{{
+          $form.title.error.message
+        }}</Message>
+      </div>
+      <div class="flex flex-col gap-1">
+        <InputText name="artist" type="text" placeholder="Artist" fluid />
+        <Message v-if="$form.artist?.invalid" severity="error" size="small" variant="simple">{{
+          $form.artist.error.message
+        }}</Message>
+      </div>
+      <Button type="submit" severity="secondary" label="Submit" />
+    </Form>
 
+    <br />
+
+    <Form
+      v-if="trackData.track_id"
+      v-slot="$trackForm"
+      :initialValues="trackData"
+      class="flex flex-col gap-4 w-full sm:w-56 mt-6"
+      @submit="onSubmitInsertTrackIntoDatabase"
+    >
+      <div class="flex flex-col gap-1">
+        <label for="track_id">Track ID</label>
+        <InputText name="track_id" id="track_id" v-model="trackData.track_id" readonly />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="track_title">Title</label>
+        <InputText name="track_title" id="track_title" v-model="trackData.track_title" />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="track_length">Length (ms)</label>
+        <InputNumber
+          name="track_length"
+          id="track_length"
+          v-model="trackData.track_length"
+          type="number"
+        />
+        <small v-if="trackData.track_length">{{ formattedTrackLength }}</small>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="track_artist_id">Artist ID</label>
+        <InputText
+          name="track_artist_id"
+          id="track_artist_id"
+          v-model="trackData.track_artist_id"
+          readonly
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="track_artist_name">Artist Name</label>
+        <InputText
+          name="track_artist_name"
+          id="track_artist_name"
+          v-model="trackData.track_artist_name"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="track_first_release_date">First Release Date</label>
+        <InputText
+          name="track_first_release_date"
+          id="track_first_release_date"
+          v-model="trackData.track_first_release_date"
+        />
+      </div>
+
+      <Button type="submit" severity="secondary" label="Submit" />
+    </Form>
+
+    <!-- <vue-sound
+      v-if="src"
+      show-download
+      image="https://images.unsplash.com/photo-1506423456648-c11ccb27338d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1600&h=750&q=80"
+      title="Haydn Cello Concerto"
+      title-link="https://github.com/kimlarocca/vue-sound"
+      details="Lorem Ipsum Dolor Sit Amet"
+      details-link="https://github.com/kimlarocca/vue-sound"
+      file="http://www.hochmuth.com/mp3/Haydn_Cello_Concerto_D-1.mp3"
+      class="mb-8"
+    /> -->
+  </main>
+  <Toast />
+</template>
 <style scoped></style>
