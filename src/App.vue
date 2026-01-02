@@ -1,202 +1,311 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { MusicBrainzApi, type IRecordingMatch } from 'musicbrainz-api'
 import { Form, type FormSubmitEvent } from '@primevue/forms'
 import InputText from 'primevue/inputtext'
-import InputNumber from 'primevue/inputnumber'
-import axios from 'axios';
+import Message from 'primevue/message'
+import Toast from 'primevue/toast'
+import FileUpload, { type FileUploadSelectEvent } from 'primevue/fileupload'
+import Button from 'primevue/button'
+import * as jsmediatags from 'jsmediatags/dist/jsmediatags.min.js'
+import axios from 'axios'
+import { RouterLink } from 'vue-router'
+import { PhHouse } from '@phosphor-icons/vue'
 
-
+interface trackData {
+  id: string
+  title: string
+  length: number
+  artist: string
+  release_date: string
+}
 
 const mbApi = new MusicBrainzApi({
   appName: 'clave-app',
   appVersion: '0.1.0',
   appContactInfo: 'gabriel.kasten@outlook.com',
 })
-
+const formInitialValues = ref({
+  title: '',
+  artist: '',
+})
 const trackData = ref({
-  track_id: '',
-  track_title: '',
-  track_length: 0,
-  track_artist: '',
-  track_release_date: '',
+  id: '',
+  title: '',
+  length: 0,
+  artist: '',
+  release_date: '',
 })
-
-
 const toast = useToast()
+const fileUploaded = ref()
+const selectedFile = ref<File | null>(null)
+const formKey = ref(0)
+const tracks = ref<trackData[]>()
 
-// Ref for FileUpload component
-const fileupload = ref()
-
-const initialValues = ref({
-  title: 'luv',
-  artist: 'nujabes',
-})
-
-const resolver = ({ values }: { values: { title?: string; artist?: string, } }) => {
+const resolver = ({ values }: { values: { title?: string; artist?: string } }) => {
   const errors: Record<string, { message: string }[]> = {}
+  return { errors }
+}
 
-  if (!values.title) {
-    errors.title = [{ message: 'Title is required.' }]
-  }
+const onFileSelect = (event: FileUploadSelectEvent) => {
+  const file = event.files[0]
+  selectedFile.value = file
 
-  if (!values.artist) {
-    errors.artist = [{ message: 'Artist is required.' }]
-  }
+  if (!file) return
 
-  return {
-    errors,
+  toast.add({
+    severity: 'info',
+    summary: 'Lendo Arquivo...',
+    detail: 'Extraindo metadados ID3.',
+    life: 2000,
+  })
+  ;(jsmediatags as any).read(file, {
+    onSuccess: (tag: any) => {
+      const tags = tag.tags
+
+      formInitialValues.value = {
+        title: tags.title || '',
+        artist: tags.artist || '',
+      }
+      formKey.value++
+
+      toast.add({
+        severity: 'success',
+        summary: 'Metadados Extraídos',
+        detail: `Artista: ${tags.artist || '?'} - Título: ${tags.title || '?'}`,
+        life: 3000,
+      })
+    },
+    onError: (error: any) => {
+      console.error('Erro ao ler tags:', error)
+      toast.add({
+        severity: 'warn',
+        summary: 'Aviso',
+        detail: 'Não foi possível ler as tags ID3 deste arquivo.',
+        life: 3000,
+      })
+    },
+  })
+}
+
+const uploadTrackFile = async (file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  toast.add({
+    severity: 'info',
+    summary: 'Enviando...',
+    detail: 'Fazendo upload do arquivo.',
+    life: 2000,
+  })
+
+  try {
+    const response = await axios.post('http://localhost:3000/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+
+    if (!response.data.filename) {
+      // O backend retornou sucesso (200) mas disse que ignorou (arquivo existe)
+      toast.add({
+        severity: 'warn',
+        summary: 'Upload Ignorado',
+        detail: response.data.message || 'Arquivo já existe no servidor.',
+        life: 4000,
+      })
+    } else {
+      // Upload realizado com sucesso
+      toast.add({
+        severity: 'success',
+        summary: 'Upload Concluído',
+        detail: `Salvo como: ${response.data.filename}`,
+        life: 3000,
+      })
+    }
+  } catch (error) {
+    console.error('Erro no upload:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Erro no Upload',
+      detail: 'Falha ao conectar com o servidor.',
+      life: 3000,
+    })
   }
 }
 
-const atachMetadata = async (result: IRecordingMatch | undefined) => {
-  if (result) {
-    trackData.value = {
-      track_id: result.id,
-      track_title: result.title,
-      track_length: result.length || 0,
-      track_release_date: result['first-release-date'] ?? 'Não Informado',
-      track_artist: result['artist-credit']?.[0]?.artist?.name ?? 'Não Informado',
+const retrieveTracksFromDB = async () => {
+  try {
+    const response = await axios.get('http://localhost:3000/tracks')
+    if (response.data) {
+      console.log(response.data)
+      tracks.value = response.data
     }
-  } else {
-    console.error('Não foi possível atribuir metadados')
+  } catch (error) {
+    console.error('Erro ao buscar músicas:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Erro ao buscar músicas',
+      detail: 'Falha ao conectar com o servidor.',
+      life: 3000,
+    })
+  }
+}
+
+const retrieveTrackMetadata = async ({ artist, title }: { artist: string; title: string }) => {
+  const searchQuery = `query=artist:"${artist}" AND recording:"${title}"`
+
+  try {
+    const r = await mbApi.search('recording', { query: searchQuery })
+
+    if (r.recordings && r.recordings.length > 0) {
+      const result = r.recordings[0]
+      populateTrackData(result)
+      toast.add({
+        severity: 'success',
+        summary: 'MusicBrainz',
+        detail: 'Metadados encontrados.',
+        life: 3000,
+      })
+    } else {
+      toast.add({
+        severity: 'warn',
+        summary: 'MusicBrainz',
+        detail: 'Nenhum registro encontrado.',
+        life: 3000,
+      })
+    }
+  } catch (err) {
+    console.error(err)
+    toast.add({
+      severity: 'error',
+      summary: 'Erro API',
+      detail: 'Falha ao buscar no MusicBrainz.',
+      life: 3000,
+    })
+  }
+}
+
+const populateTrackData = (result: IRecordingMatch) => {
+  try {
+    trackData.value = {
+      id: result.id,
+      title: result.title,
+      length: result.length || 0,
+      release_date: result['first-release-date'] ?? 'Não Informado',
+      artist: result['artist-credit']?.[0]?.artist?.name ?? 'Não Informado',
+    }
+  } catch {
+    toast.add({
+      severity: 'error',
+      summary: 'Erro',
+      detail: 'Falha ao processar dados.',
+      life: 3000,
+    })
   }
 }
 
 const onSubmitRetrieveTrackMetadata = async (e: FormSubmitEvent) => {
   if (e.valid) {
-    toast.add({ severity: 'success', summary: 'Metadata Retrieved.', life: 3000 })
-
-    if (!fileupload.value || !fileupload.value.files || fileupload.value.files.length === 0) {
-      alert("Por favor, selecione um arquivo de áudio.");
-      return;
-    }
-
-    var formData = new FormData();
-    formData.append("file", fileupload.value.files[0]);
-
-    try {
-      const response = await axios.post('http://localhost:3000/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-
-      console.log('Upload concluído:', response.data);
-      toast.add({ severity: 'success', summary: 'Arquivo enviado para o servidor!', life: 3000 });
-
-    } catch (error) {
-      console.error('Erro no upload:', error);
-      toast.add({ severity: 'error', summary: 'Falha no upload', life: 3000 });
-    }
-
     const artist = e.states.artist?.value
     const title = e.states.title?.value
 
-    const searchQuery = `query=artist:"${artist}" AND recording:"${title}"`
-
-    await mbApi
-      .search('recording', {
-        query: searchQuery,
+    if (!artist || !title) {
+      toast.add({
+        severity: 'error',
+        summary: 'Dados Incompletos',
+        detail: 'Preencha Artista e Título.',
+        life: 3000,
       })
-      .then((r) => {
-        atachMetadata(r.recordings[0])
-      })
-      .catch((err) => {
-        alert(`Erro ao consultar metadados: ${err}`)
-      })
+      return
+    }
 
+    if (selectedFile.value) {
+      await uploadTrackFile(selectedFile.value)
+    } else if (!fileUploaded.value?.files?.length) {
+      // Apenas aviso visual se não tiver arquivo nenhum
+      toast.add({
+        severity: 'secondary',
+        summary: 'Aviso',
+        detail: 'Nenhum arquivo anexado para upload.',
+        life: 2000,
+      })
+    }
 
+    retrieveTrackMetadata({ artist: String(artist), title: String(title) })
+    // TODO: post na API
   }
 }
 
-const onSubmitInsertTrackIntoDatabase = async (e: FormSubmitEvent) => {
-  if (e.valid) {
-    toast.add({ severity: 'success', summary: 'Inserted into Database.', life: 3000 })
-
-    console.log(e.values)
-  }
-}
-
-const formattedTrackLength = computed(() => {
-  const ms = trackData.value.track_length || 0
-  const minutes = Math.floor(ms / 60000)
-  const seconds = Math.floor((ms % 60000) / 1000)
-  return `${minutes}:${String(seconds).padStart(2, '0')}`
+onMounted(() => {
+  retrieveTracksFromDB()
 })
 </script>
 
 <template>
-  <main class="p-4">
-    <Form v-slot="$form" :initialValues :resolver :validateOnValueUpdate="false" :validateOnBlur="true"
-      @submit="onSubmitRetrieveTrackMetadata" class="flex flex-col gap-4 w-full sm:w-56">
+  <div class="flex items-center px-4 gap-2 border-b border-slate-200">
+    <RouterLink
+      :to="`/`"
+      class="border border-blue-400 p-2 rounded bg-blue-200 text-blue-800 h-fit"
+    >
+      <PhHouse :size="22" weight="duotone" />
+    </RouterLink>
+    <Form
+      class="flex gap-4 w-dvw p-4"
+      v-slot="$form"
+      :key="formKey"
+      :resolver="resolver"
+      :initialValues="formInitialValues"
+      :validateOnValueUpdate="false"
+      :validateOnBlur="true"
+      @submit="onSubmitRetrieveTrackMetadata"
+    >
       <div class="flex flex-col gap-1">
         <InputText name="title" type="text" placeholder="Title" fluid />
-        <Message v-if="$form.title?.invalid" severity="error" size="small" variant="simple">{{
-          $form.title.error.message
-        }}</Message>
+        <Message v-if="$form.title?.invalid" severity="error" size="small" variant="simple">
+          {{ $form.title.error.message }}
+        </Message>
       </div>
+
       <div class="flex flex-col gap-1">
         <InputText name="artist" type="text" placeholder="Artist" fluid />
-        <Message v-if="$form.artist?.invalid" severity="error" size="small" variant="simple">{{
-          $form.artist.error.message
-        }}</Message>
+        <Message v-if="$form.artist?.invalid" severity="error" size="small" variant="simple">
+          {{ $form.artist.error.message }}
+        </Message>
       </div>
 
       <Toast />
-      <FileUpload name="file" ref="fileupload" mode="basic" accept="audio/*" :maxFileSize="10000000" />
 
+      <FileUpload
+        name="file"
+        ref="fileUploaded"
+        mode="basic"
+        accept="audio/*"
+        :maxFileSize="100000000"
+        @select="onFileSelect"
+      />
 
-      <Button type="submit" severity="secondary" label="Submit" />
+      <Button type="submit" severity="secondary" label="Salvar e Buscar" />
     </Form>
-
-    <br />
-
-    <Form v-if="trackData.track_id" v-slot="$trackForm" :initialValues="trackData"
-      class="flex flex-col gap-4 w-full sm:w-56 mt-6" @submit="onSubmitInsertTrackIntoDatabase">
-      <div class="flex flex-col gap-1">
-        <label for="track_id">Track ID</label>
-        <InputText name="track_id" id="track_id" v-model="trackData.track_id" readonly />
-      </div>
-
-      <div class="flex flex-col gap-1">
-        <label for="track_title">Title</label>
-        <InputText name="track_title" id="track_title" v-model="trackData.track_title" />
-      </div>
-
-      <div class="flex flex-col gap-1">
-        <label for="track_length">Length (ms)</label>
-        <InputNumber name="track_length" id="track_length" v-model="trackData.track_length" type="number" />
-        <small v-if="trackData.track_length">{{ formattedTrackLength }}</small>
-      </div>
-
-      <div class="flex flex-col gap-1">
-        <label for="track_artist_name">Artist Name</label>
-        <InputText name="track_artist_name" id="track_artist_name" v-model="trackData.track_artist" />
-      </div>
-
-      <div class="flex flex-col gap-1">
-        <label for="track_first_release_date">First Release Date</label>
-        <InputText name="track_first_release_date" id="track_first_release_date"
-          v-model="trackData.track_release_date" />
-      </div>
-
-      <Button type="submit" severity="secondary" label="Submit" />
-    </Form>
-
-    <!-- <vue-sound
-      v-if="src"
-      show-download
-      image="https://images.unsplash.com/photo-1506423456648-c11ccb27338d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1600&h=750&q=80"
-      title="Haydn Cello Concerto"
-      title-link="https://github.com/kimlarocca/vue-sound"
-      details="Lorem Ipsum Dolor Sit Amet"
-      details-link="https://github.com/kimlarocca/vue-sound"
-      file="http://www.hochmuth.com/mp3/Haydn_Cello_Concerto_D-1.mp3"
-      class="mb-8"
-    /> -->
+  </div>
+  <main class="flex">
+    <aside class="w-fit border-r border-slate-200 h-[90dvh] bg-slate-50">
+      <ul class="gap-2 flex flex-col">
+        <li class="p-4 font-semibold">Tracks:</li>
+        <li v-for="track in tracks" class="px-4">
+          <RouterLink
+            :to="`/track/${track.id}`"
+            class="flex gap-2 cursor-pointer bg-blue-200 border border-blue-400 px-4 py-2 rounded hover:bg-blue-300"
+          >
+            <p>{{ track.title }}</p>
+            |
+            <p>{{ track.artist }}</p>
+          </RouterLink>
+        </li>
+      </ul>
+    </aside>
+    <router-view />
   </main>
-  <Toast />
+  <footer></footer>
 </template>
-<style scoped></style>

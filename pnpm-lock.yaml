@@ -23,6 +23,9 @@ importers:
       axios:
         specifier: ^1.13.2
         version: 1.13.2
+      clave-app:
+        specifier: 'link:'
+        version: 'link:'
       express:
         specifier: ^5.2.1
         version: 5.2.1
@@ -57,6 +60,9 @@ importers:
       '@tsconfig/node24':
         specifier: ^24.0.3
         version: 24.0.3
+      '@types/jsmediatags':
+        specifier: ^3.9.6
+        version: 3.9.6
       '@types/node':
         specifier: ^24.10.4
         version: 24.10.4
@@ -1095,6 +1101,9 @@ packages:
 
   '@types/http-errors@2.0.5':
     resolution: {integrity: sha512-r8Tayk8HJnX0FztbZN7oVqGccWgw98T/0neJphO91KkmOzug1KkofZURD4UaD5uH8AqcFLfdPErnBod0u71/qg==}
+
+  '@types/jsmediatags@3.9.6':
+    resolution: {integrity: sha512-a2IVxVGXBCCVzONBFKGBb2mnTNMAt0shl+Mb5+wM5YVxymhgqNilr/7/x+XePYM2DnmWwCYlBRjq+8q7nsp2PA==}
 
   '@types/json-schema@7.0.11':
     resolution: {integrity: sha512-wOuvG1SN4Us4rez+tylwwwCV1psiNVOkJeM3AUWUNWg/jDQY2+HE/444y5gc+jBmRqASOm2Oeh5c1axHobwRKQ==}
@@ -4033,6 +4042,8 @@ snapshots:
       '@types/serve-static': 1.15.10
 
   '@types/http-errors@2.0.5': {}
+
+  '@types/jsmediatags@3.9.6': {}
 
   '@types/json-schema@7.0.11': {}
 
