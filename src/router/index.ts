@@ -7,7 +7,6 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'home-page',
       component: HomeView,
     },
     { path: '/track/:id', name: 'track-page', component: TrackView, props: true },
