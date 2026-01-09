@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { PhHeart, PhPushPin } from '@phosphor-icons/vue';
-
 </script>
 
 <template>

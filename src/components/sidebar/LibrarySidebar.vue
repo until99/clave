@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PhMagnifyingGlass, PhNotebook, PhPlus } from '@phosphor-icons/vue';
+import { PhMagnifyingGlass, PhNotebook } from '@phosphor-icons/vue';
 import Badge from '../common/Badge.vue';
 import PlaylistItem from '../common/PlaylistItem.vue';
 import NewPlaylistButton from '../common/NewPlaylistButton.vue';
@@ -21,7 +21,7 @@ import UploadAudioButton from '../common/UploadAudioButton.vue';
         <Badge />
       </div>
       <div class="flex flex-col gap-3">
-        <PlaylistItem />
+        <PlaylistItem cover="" title=""  />
       </div>
     </div>
     <div class="flex flex-col gap-5">

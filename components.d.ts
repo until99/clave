@@ -12,11 +12,11 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    Albums: typeof import('./src/components/layout/playlist/tabs/Albums.vue')['default']
+    Albums: typeof import('./src/components/common/tabs/Albums.vue')['default']
     Badge: typeof import('./src/components/common/Badge.vue')['default']
     Button: typeof import('./src/components/common/Button.vue')['default']
     ContentArea: typeof import('./src/components/layout/ContentArea.vue')['default']
-    Favorites: typeof import('./src/components/layout/playlist/tabs/Favorites.vue')['default']
+    Favorites: typeof import('./src/components/common/tabs/Favorites.vue')['default']
     FileUpload: typeof import('primevue/fileupload')['default']
     Form: typeof import('@primevue/forms/form')['default']
     Header: typeof import('./src/components/Header.vue')['default']
@@ -42,8 +42,8 @@ declare module 'vue' {
     QueueList: typeof import('./src/components/player/QueueList.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
-    Shows: typeof import('./src/components/layout/playlist/tabs/Shows.vue')['default']
-    Songs: typeof import('./src/components/layout/playlist/tabs/Songs.vue')['default']
+    Shows: typeof import('./src/components/common/tabs/Shows.vue')['default']
+    Songs: typeof import('./src/components/common/tabs/Songs.vue')['default']
     Tab: typeof import('primevue/tab')['default']
     TabList: typeof import('primevue/tablist')['default']
     TabPanel: typeof import('primevue/tabpanel')['default']
@@ -58,11 +58,11 @@ declare module 'vue' {
 
 // For TSX support
 declare global {
-  const Albums: typeof import('./src/components/layout/playlist/tabs/Albums.vue')['default']
+  const Albums: typeof import('./src/components/common/tabs/Albums.vue')['default']
   const Badge: typeof import('./src/components/common/Badge.vue')['default']
   const Button: typeof import('./src/components/common/Button.vue')['default']
   const ContentArea: typeof import('./src/components/layout/ContentArea.vue')['default']
-  const Favorites: typeof import('./src/components/layout/playlist/tabs/Favorites.vue')['default']
+  const Favorites: typeof import('./src/components/common/tabs/Favorites.vue')['default']
   const FileUpload: typeof import('primevue/fileupload')['default']
   const Form: typeof import('@primevue/forms/form')['default']
   const Header: typeof import('./src/components/Header.vue')['default']
@@ -88,8 +88,8 @@ declare global {
   const QueueList: typeof import('./src/components/player/QueueList.vue')['default']
   const RouterLink: typeof import('vue-router')['RouterLink']
   const RouterView: typeof import('vue-router')['RouterView']
-  const Shows: typeof import('./src/components/layout/playlist/tabs/Shows.vue')['default']
-  const Songs: typeof import('./src/components/layout/playlist/tabs/Songs.vue')['default']
+  const Shows: typeof import('./src/components/common/tabs/Shows.vue')['default']
+  const Songs: typeof import('./src/components/common/tabs/Songs.vue')['default']
   const Tab: typeof import('primevue/tab')['default']
   const TabList: typeof import('primevue/tablist')['default']
   const TabPanel: typeof import('primevue/tabpanel')['default']

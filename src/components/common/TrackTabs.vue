@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import Songs from '../layout/playlist/tabs/Songs.vue';
-import Albums from '../layout/playlist/tabs/Albums.vue';
-import Shows from '../layout/playlist/tabs/Shows.vue';
-import Favorites from '../layout/playlist/tabs/Favorites.vue';
+import Songs from '@/components/common/tabs/Songs.vue';
+import Albums from '@/components/common/tabs/Albums.vue';
+import Shows from '@/components/common/tabs/Shows.vue';
+import Favorites from '@/components/common/tabs/Favorites.vue';
 
 const tabs = ref([
   {
@@ -57,6 +57,8 @@ const changeActiveTab = (key: number) => {
         </button>
       </li>
     </ul>
-    <component :is="activeTab?.component" v-if="activeTab" />
+    <div class="mt-4 w-full max-h-[35dvh] overflow-y-scroll">
+      <component :is="activeTab?.component" v-if="activeTab" />
+    </div>
   </div>
 </template>
