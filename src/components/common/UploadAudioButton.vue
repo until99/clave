@@ -1,3 +1,8 @@
+<script setup lang="ts">
+import { PhPlus } from '@phosphor-icons/vue';
+
+</script>
+
 <template>
   <div class="flex flex-col gap-5">
     <label
@@ -8,7 +13,7 @@
     </label>
 
     <p class="mt-1 text-sm text-slate-400 mx-auto" id="file_input_help">
-      MP3, FLAC, ... (MAX. 800x400px).
+      MP3, FLAC, ... (MAX. 50mb).
     </p>
   </div>
 </template>

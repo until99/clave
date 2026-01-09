@@ -15,7 +15,7 @@ import QueueList from './components/player/QueueList.vue';
     <main class="flex gap-4">
       <div class="flex flex-col gap-4">
         <section
-          class="mt-12 p-5 h-[calc(82dvh-64px)] w-[calc(100dvw-704px)] rounded-md flex flex-col gap-3 bg-[rgb(203_213_255/20%)] backdrop-blur-lg shadow-white">
+          class="mt-12 p-5 h-[calc(82dvh-32px)] w-[calc(100dvw-704px)] rounded-md flex flex-col gap-3 bg-[rgb(203_213_255/20%)] backdrop-blur-lg shadow-white">
           <router-view />
         </section>
         <PlaybackBar />
