@@ -6,7 +6,6 @@ import Aura from '@primeuix/themes/aura'
 import App from './App.vue'
 import router from './router'
 import ToastService from 'primevue/toastservice'
-import { primeVuePassThrough } from './primevue-pt'
 
 const app = createApp(App)
 app.use(ToastService)
@@ -18,7 +17,6 @@ app.use(PrimeVue, {
       darkModeSelector: false,
     },
   },
-  pt: primeVuePassThrough, // Estilos customizados globais
 })
 
 app.mount('#app')
