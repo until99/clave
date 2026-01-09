@@ -26,6 +26,7 @@ declare module 'vue' {
     MusicPlayingNow: typeof import('./src/components/layout/MusicPlayingNow.vue')['default']
     MusicQueueList: typeof import('./src/components/layout/MusicQueueList.vue')['default']
     NavigationContainer: typeof import('./src/components/layout/NavigationContainer.vue')['default']
+    NewPlaylistButton: typeof import('./src/components/common/NewPlaylistButton.vue')['default']
     NowPlaying: typeof import('./src/components/player/NowPlaying.vue')['default']
     PlaybackBar: typeof import('./src/components/layout/PlaybackBar.vue')['default']
     PlayerControl: typeof import('./src/components/layout/PlayerControl.vue')['default']
@@ -38,6 +39,7 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     Toast: typeof import('primevue/toast')['default']
+    UploadAudioButton: typeof import('./src/components/common/UploadAudioButton.vue')['default']
   }
 }
 
@@ -57,6 +59,7 @@ declare global {
   const MusicPlayingNow: typeof import('./src/components/layout/MusicPlayingNow.vue')['default']
   const MusicQueueList: typeof import('./src/components/layout/MusicQueueList.vue')['default']
   const NavigationContainer: typeof import('./src/components/layout/NavigationContainer.vue')['default']
+  const NewPlaylistButton: typeof import('./src/components/common/NewPlaylistButton.vue')['default']
   const NowPlaying: typeof import('./src/components/player/NowPlaying.vue')['default']
   const PlaybackBar: typeof import('./src/components/layout/PlaybackBar.vue')['default']
   const PlayerControl: typeof import('./src/components/layout/PlayerControl.vue')['default']
@@ -69,4 +72,5 @@ declare global {
   const RouterLink: typeof import('vue-router')['RouterLink']
   const RouterView: typeof import('vue-router')['RouterView']
   const Toast: typeof import('primevue/toast')['default']
+  const UploadAudioButton: typeof import('./src/components/common/UploadAudioButton.vue')['default']
 }
